@@ -10,19 +10,15 @@ contract Decentralist {
     mapping(address => bool) public listMapping;
 }
 
-contract RoyaltyTester is ERC721, ERC721URIStorage, Ownable {
+contract RoyaltyEnforcingNft is ERC721, ERC721URIStorage, Ownable {
     using Counters for Counters.Counter;
 
     Counters.Counter private _tokenIdCounter;
 
-    Decentralist listContract = Decentralist( /* address here */ );
+    Decentralist public listContract;
 
-    constructor() ERC721("RoyaltyTester", "_RT_") {
-        listContract = Decentralist( /* address here */ );
-    }
-
-    function _baseURI() internal pure override returns (string memory) {
-        return "https://static.wikia.nocookie.net/aliceinborderland/images/8/87/King_of_Diamonds.png/revision/latest?cb=20201016103458";
+    constructor(address list, string memory name, string memory symbol) ERC721(name, symbol) {
+        listContract = Decentralist(list);
     }
 
     function safeMint(address to, string memory uri) public onlyOwner {
@@ -52,12 +48,13 @@ contract RoyaltyTester is ERC721, ERC721URIStorage, Ownable {
         address to,
         uint256 tokenId
     ) internal virtual override(ERC721) {
+        //revert if transfer is not a mint, not a burn and msg.sender is not on the whitelist
         if (
             from != address(0) &&
             to != address(0) &&
-            listContract.listMapping(msg.sender)
+            !listContract.listMapping(msg.sender)
         ) {
-            revert("ERC721OperatorFilter: illegal operator");
+            revert("RoyaltyEnforcingNft: illegal operator");
         }
         super._beforeTokenTransfer(from, to, tokenId);
     }
